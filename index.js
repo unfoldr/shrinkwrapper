@@ -39,9 +39,8 @@ var urlBasename = function(url) {
   return path.basename(require('url').parse(url).path);
 };
 
-var download = function(package, next) {
+var download = function(url, next) {
   next = next || function() {};
-  var url = package.url;
   var filename = urlBasename(url);
   if (filename == '') return;
   filename = path.join(vaultPath, filename);
@@ -50,20 +49,19 @@ var download = function(package, next) {
       next(null);
       return;
     } else {
+      console.log('http', 'GET', url);
       httpRequest.get(url, filename, function(err, res) {
         if (err) {
           console.error(err);
           next(err);
           return;
         }
-        console.log(package.name + '@' + package.version, 
-          url, '\n -->', res.file);
+        console.log('http', res.code, url);
         next(null);
       });
     }
   });
 };
-
 
 if (argv.save) {
   spawn('npm', ['shrinkwrap'], { stdio: 'inherit' }).
@@ -71,24 +69,18 @@ if (argv.save) {
       if (code != 0)
         return;
 
-      var urls = [];
+      var tasks = {};
       traverse(JSON.parse(fs.readFileSync(path.join(rootPath, 'npm-shrinkwrap.json')))).
         forEach(function() {
           if (this.node['resolved']) {
-            urls.push({
-              name: this.key,
-              version: this.node['version'],
-              url: this.node['resolved']
-            });
+            var url = this.node['resolved'];
+            tasks[url] = tasks[url] || function(next) { download(url, next); };
           }
         });
 
-      // TODO: Dedupe the urls/packages.
-      // TODO: Rename 'urls' to 'deps' or 'packages'.
-
       mkdirp.sync(vaultPath);
 
-      async.eachLimit(urls, 3, download, function(err) {
+      async.parallelLimit(tasks, 10, function(err) {
         if (err) { console.error(err); return; }
       });
     });
@@ -99,7 +91,6 @@ if (argv.save) {
 var getBackupFilename = function(filename) {
   return path.join(path.dirname(filename), '.' + path.basename(filename) + '.bak');
 };
-
 
 // Asynchronously applies a mapping function to values of the given field in
 // the identified JSON file.  Makes a backup copy of the file first.
