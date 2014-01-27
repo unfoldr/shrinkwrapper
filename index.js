@@ -10,10 +10,11 @@ var fs = require('fs'),
     path = require('path'),
     async = require('async'),
     argv = require('optimist').argv,
+    http = require('http'),
+    ecstatic = require('ecstatic'),
     httpRequest = require('http-request'),
     traverse = require('traverse'),
     mkdirp = require('mkdirp'),
-    httpServer = require('http-server'),
     portfinder = require('portfinder'),
     glob = require('glob'),
     spawn = require('child_process').spawn;
@@ -99,6 +100,7 @@ var getBackupFilename = function(filename) {
   return path.join(path.dirname(filename), '.' + path.basename(filename) + '.bak');
 };
 
+
 // Asynchronously applies a mapping function to values of the given field in
 // the identified JSON file.  Makes a backup copy of the file first.
 var mapFile = function(filename, field, fn, next) {
@@ -137,7 +139,7 @@ if (argv.install) {
   portfinder.getPort(function (err, port) {
     if (err) throw err;
 
-    var server = httpServer.createServer({ root: vaultPath });
+    var server = http.createServer(ecstatic(vaultPath));
     server.listen(port, host, function() {
 
       // Redirect resolved references from the default npm registry to
@@ -161,8 +163,9 @@ if (argv.install) {
 
           var restore = function() {
             // Restore the mapped files
-            async.each(files, unmapFile);
-            process.exit();
+            async.each(files, unmapFile, function() {
+              process.exit();
+            });
           };
 
           if (err) restore();
