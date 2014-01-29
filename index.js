@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 
-// TODO: Check it in!
-// TODO: Get working with 'npm install -g'
 // TODO: Add some more comments and tidy the code a bit.
 // TODO: Show a warning if no '_resolved' is present.
 // TODO: Display some things in colour.

@@ -1,8 +1,8 @@
 {
   "name": "shrinkwrap-vault",
   "version": "0.1.0",
-  "description": "Store your shrinkwrapped packages safely in a vault for later.",
-  "main": "index.js",
+  "description": "Save shrinkwrapped packages away to install them safely later.",
+  "bin": "./index.js",
   "keywords": [
     "npm",
     "shrinkwrap",
@@ -13,7 +13,7 @@
     "save",
     "deployment"
   ],
-  "author": "Andrew Appleyard",
+  "author": "Andrew Appleyard <unfoldr@gmail.com>",
   "license": "MIT",
   "dependencies": {
     "http-get": "~0.5.10",
