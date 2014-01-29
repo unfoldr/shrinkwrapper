@@ -24,7 +24,8 @@
     "portfinder": "~0.2.1",
     "optimist": "~0.6.0",
     "glob": "~3.2.8",
-    "ecstatic": "~0.4.13"
+    "ecstatic": "~0.4.13",
+    "chalk": "~0.4.0"
   },
   "shrinkwrapVault": "./packages"
 }

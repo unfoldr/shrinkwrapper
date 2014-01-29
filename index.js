@@ -2,7 +2,6 @@
 
 // TODO: Add some more comments and tidy the code a bit.
 // TODO: Show a warning if no '_resolved' is present.
-// TODO: Display some things in colour.
 
 var fs = require('fs'),
     path = require('path'),
@@ -15,7 +14,8 @@ var fs = require('fs'),
     mkdirp = require('mkdirp'),
     portfinder = require('portfinder'),
     glob = require('glob'),
-    spawn = require('child_process').spawn;
+    spawn = require('child_process').spawn,
+    chalk = require('chalk');
 
 var findRootPath = function() {
   var cwd = path.resolve('.'),
@@ -47,14 +47,14 @@ var download = function(url, next) {
       next(null);
       return;
     } else {
-      console.log('http', 'GET', url);
+      console.log(chalk.green('http'), chalk.magenta('GET'), url);
       httpRequest.get(url, filename, function(err, res) {
         if (err) {
           console.error(err);
           next(err);
           return;
         }
-        console.log('http', res.code, url);
+        console.log(chalk.green('http'), chalk.magenta(res.code), url);
         next(null);
       });
     }
