@@ -1,12 +1,10 @@
 #!/usr/bin/env node
 
-// TODO: Add some more comments and tidy the code a bit.
 // TODO: Show a warning if no '_resolved' is present.
 
 var fs = require('fs'),
     path = require('path'),
     async = require('async'),
-    argv = require('optimist').argv,
     http = require('http'),
     ecstatic = require('ecstatic'),
     httpRequest = require('http-request'),
@@ -16,6 +14,13 @@ var fs = require('fs'),
     glob = require('glob'),
     spawn = require('child_process').spawn,
     chalk = require('chalk');
+
+var optimist = require('optimist')
+      .alias('s', 'store')
+      .alias('p', 'port')
+      .alias('a', 'address')
+      .alias('h', 'help')
+    argv = optimist.argv;
 
 var findRootPath = function() {
   var cwd = path.resolve('.'),
@@ -31,7 +36,7 @@ var findRootPath = function() {
 
 var rootPath = findRootPath(),
     packageJson = JSON.parse(fs.readFileSync(path.join(rootPath, 'package.json'))),
-    vaultPath = path.join(rootPath, packageJson.shrinkwrapVault || './packages');
+    storePath = argv.store || path.join(rootPath, (packageJson.shrinkwrapper || {}).store || './packages');
 
 var urlBasename = function(url) {
   return path.basename(require('url').parse(url).path);
@@ -41,7 +46,7 @@ var download = function(url, next) {
   next = next || function() {};
   var filename = urlBasename(url);
   if (filename == '') return;
-  filename = path.join(vaultPath, filename);
+  filename = path.join(storePath, filename);
   fs.exists(filename, function(exists) {
     if (exists) {
       next(null);
@@ -60,31 +65,6 @@ var download = function(url, next) {
     }
   });
 };
-
-if (argv.save) {
-  spawn('npm', ['shrinkwrap'], { stdio: 'inherit' }).
-    on('close', function(code) {
-      if (code != 0)
-        return;
-
-      var tasks = {};
-      traverse(JSON.parse(fs.readFileSync(path.join(rootPath, 'npm-shrinkwrap.json')))).
-        forEach(function() {
-          if (this.node['resolved']) {
-            var url = this.node['resolved'];
-            tasks[url] = tasks[url] || function(next) { download(url, next); };
-          }
-        });
-
-      mkdirp.sync(vaultPath);
-
-      async.parallelLimit(tasks, 10, function(err) {
-        if (err) { console.error(err); return; }
-      });
-    });
-
-  return;
-}
 
 var getBackupFilename = function(filename) {
   return path.join(path.dirname(filename), '.' + path.basename(filename) + '.bak');
@@ -117,18 +97,46 @@ var unmapFile = function(filename, next) {
   fs.rename(backupFilename, filename, next);
 };
 
-if (argv.install) {
-  
+//
+// Shrinkwrap command
+//
+var shrinkwrap = function() {
+  spawn('npm', ['shrinkwrap'], { stdio: 'inherit' }).
+    on('close', function(code) {
+      if (code != 0)
+        return;
+
+      var tasks = {};
+      traverse(JSON.parse(fs.readFileSync(path.join(rootPath, 'npm-shrinkwrap.json')))).
+        forEach(function() {
+          if (this.node['resolved']) {
+            var url = this.node['resolved'];
+            tasks[url] = tasks[url] || function(next) { download(url, next); };
+          }
+        });
+
+      mkdirp.sync(storePath);
+
+      async.parallelLimit(tasks, 10, function(err) {
+        if (err) { console.error(err); return; }
+      });
+    });
+};
+
+//
+// Install command
+//
+var install = function() {
   // TODO: Report an error if there is no npm-shrinkwrap.json file!
 
-  var basePort = argv.p || argv.port    || '8080',
-      host     = argv.a || argv.address || 'localhost';
+  var basePort = argv.port    || '8080',
+      host     = argv.address || 'localhost';
 
   portfinder.basePort = parseInt(basePort, 10);
   portfinder.getPort(function (err, port) {
     if (err) throw err;
 
-    var server = http.createServer(ecstatic(vaultPath));
+    var server = http.createServer(ecstatic(storePath));
     server.listen(port, host, function() {
 
       // Redirect resolved references from the default npm registry to
@@ -171,8 +179,33 @@ if (argv.install) {
       );
     });
   });
+};
 
-  return;
-}
+//
+// Usage (help)
+//
+var usage = function() {
+  console.log([
+    'Usage: ' + argv.$0 + ' <command> <options>',
+    '',
+    '  Save shrinkwrapped packages away and install them later.',
+    '',
+    'Commands:',
+    '',
+    '  shrinkwrap (default)   run ' + chalk.yellow('npm shrinkwrap') + ' and download required packages',
+    '  install                run ' + chalk.yellow('npm install') + ' using previously saved packages',
+    '',
+    'Options:',
+    '',
+    '  -s, --store            set directory for saved packages (overrides setting in package.json)',
+    '  -h, --help             show usage information',
+    ''
+  ].join('\n'));
+};
 
-console.error('Usage: ...');
+var command = argv._.join();
+
+if      (argv.help)                                usage();
+else if (command == '' || command == 'shrinkwrap') shrinkwrap();
+else if (command == 'install')                     install();
+else                                               usage();

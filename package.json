@@ -1,7 +1,7 @@
 {
-  "name": "shrinkwrap-vault",
+  "name": "shrinkwrapper",
   "version": "0.1.0",
-  "description": "Save shrinkwrapped packages away to install them safely later.",
+  "description": "Save shrinkwrapped packages away and install them later.",
   "bin": "./index.js",
   "keywords": [
     "npm",
@@ -25,7 +25,10 @@
     "optimist": "~0.6.0",
     "glob": "~3.2.8",
     "ecstatic": "~0.4.13",
-    "chalk": "~0.4.0"
+    "chalk": "~0.4.0",
+    "commander": "~2.1.0"
   },
-  "shrinkwrapVault": "./packages"
+  "shrinkwrapper": {
+    "store" : "./packages"
+  }
 }
