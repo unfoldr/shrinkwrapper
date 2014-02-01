@@ -49,20 +49,27 @@ var pathJoin = function(p1, p2) {
 };
 
 var rootPath = findRootPath(),
-    inRoot = function(p) { return pathJoin(rootPath, p); },
-    packageJson = JSON.parse(fs.readFileSync(inRoot('package.json'))),
-    storePath = argv.store || inRoot((packageJson.shrinkwrapper || {}).store || './packages'),
-    inStore = function(p) { return path.join(storePath, p); };
+    inRoot = function(p) { return pathJoin(rootPath, p); };
+
+var getStorePath = function() {
+  if (!rootPath) {
+    console.error("Unable to find 'package.json'.  Are you in the right directory?");
+    process.exit(1);
+  }
+
+  var packageJson = JSON.parse(fs.readFileSync(inRoot('package.json')));
+  return argv.store || inRoot((packageJson.shrinkwrapper || {}).store || './packages');
+};
 
 var urlBasename = function(url) {
   return path.basename(require('url').parse(url).path);
 };
 
-var download = function(url, next) {
+var download = function(url, dest, next) {
   next = next || function() {};
   var filename = urlBasename(url);
   if (filename == '') return;
-  filename = inStore(filename);
+  filename = path.join(dest, filename);
   fs.exists(filename, function(exists) {
     if (exists) {
       next(null);
@@ -117,6 +124,8 @@ var unmapFile = function(filename, next) {
 // Shrinkwrap command
 //
 var shrinkwrap = function() {
+  var storePath = getStorePath();
+
   spawn('npm', ['shrinkwrap'], { stdio: 'inherit' }).
     on('close', function(code) {
       if (code != 0) {
@@ -128,7 +137,7 @@ var shrinkwrap = function() {
         forEach(function() {
           if (this.node['resolved']) {
             var url = this.node['resolved'];
-            tasks[url] = tasks[url] || function(next) { download(url, next); };
+            tasks[url] = tasks[url] || function(next) { download(url, storePath, next); };
           }
         });
 
@@ -148,6 +157,7 @@ var shrinkwrap = function() {
 // Install command
 //
 var install = function() {
+  var storePath = getStorePath();
 
   // Complain if we don't have a shrinkwrap file
   if (!fs.existsSync(inRoot('npm-shrinkwrap.json'))) {
