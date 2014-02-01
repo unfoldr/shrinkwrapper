@@ -222,7 +222,7 @@ var usage = function() {
   console.log([
     'Usage: ' + argv.$0 + ' <command> <options>',
     '',
-    '  Save shrinkwrapped packages away and install them later.',
+    '  Save shrinkwrapped npm packages away and install them later.',
     '',
     'Commands:',
     '',

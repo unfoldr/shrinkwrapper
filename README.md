@@ -57,6 +57,6 @@ adding a __shrinkwrapper__ object to your `package.json` as follows:
 
 [Andrew Appleyard](https://github.com/unfoldr)
 
-## Licence
+## License
 
 MIT
