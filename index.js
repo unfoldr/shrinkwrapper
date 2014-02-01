@@ -103,8 +103,9 @@ var unmapFile = function(filename, next) {
 var shrinkwrap = function() {
   spawn('npm', ['shrinkwrap'], { stdio: 'inherit' }).
     on('close', function(code) {
-      if (code != 0)
-        return;
+      if (code != 0) {
+        process.exit(code);
+      }
 
       var tasks = {};
       traverse(JSON.parse(fs.readFileSync(path.join(rootPath, 'npm-shrinkwrap.json')))).
@@ -118,7 +119,10 @@ var shrinkwrap = function() {
       mkdirp.sync(storePath);
 
       async.parallelLimit(tasks, 10, function(err) {
-        if (err) { console.error(err); return; }
+        if (err) {
+          console.error(err);
+          process.exit(1);
+        }
       });
     });
 };
@@ -127,7 +131,12 @@ var shrinkwrap = function() {
 // Install command
 //
 var install = function() {
-  // TODO: Report an error if there is no npm-shrinkwrap.json file!
+
+  // Complain if we don't have a shrinkwrap file
+  if (!fs.existsSync(path.join(rootPath, 'npm-shrinkwrap.json'))) {
+    console.log("Missing 'npm-shrinkwrap.json'.  Run " + chalk.yellow(argv.$0 + ' shrinkwrap'));
+    process.exit(1);
+  }
 
   var basePort = argv.port    || '8080',
       host     = argv.address || 'localhost';
@@ -158,22 +167,25 @@ var install = function() {
           );
         }, function(err) {
 
-          var restore = function() {
+          var restore = function(code) {
             // Restore the mapped files
             async.each(files, unmapFile, function() {
-              process.exit();
+              process.exit(code);
             });
           };
 
-          if (err) restore();
+          if (err) {
+            console.error(err);
+            restore(1);
+          }
 
-          process.on('SIGINT', restore);
+          process.on('SIGINT', function () { restore(1); });
 
           // Install package files from the vault
           spawn('npm', ['install'], { stdio: 'inherit' }).
             on('close', function(code) {
               server.close();
-              restore();
+              restore(code);
             });
         }
       );
