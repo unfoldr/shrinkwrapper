@@ -1,6 +1,6 @@
 {
   "name": "shrinkwrapper",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A utility for saving shrinkwrapped npm packages away and installing them later.",
   "author": "Andrew Appleyard <unfoldr@gmail.com>",
   "license": "MIT",
