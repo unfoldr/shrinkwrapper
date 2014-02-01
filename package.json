@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "description": "A utility for saving shrinkwrapped npm packages away and installing them later.",
   "bin": "./index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/unfoldr/shrinkwrapper"
+  },
   "keywords": [
     "npm",
     "shrinkwrap",
