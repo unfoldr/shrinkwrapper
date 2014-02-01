@@ -1,5 +1,10 @@
 #!/usr/bin/env node
 
+//
+// A utility for saving shrinkwrapped npm packages away and installing them
+// later.
+//
+
 // TODO: Show a warning if no '_resolved' is present due to npm bug
 //       (https://github.com/npm/npm/issues/3581).
 
