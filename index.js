@@ -35,8 +35,16 @@ var findRootPath = function() {
   }
 };
 
+// Like path.join, but ignores the first path if the second is absolute.
+var pathJoin = function(p1, p2) {
+  if (p2.length > 0 && p2[0] == path.sep)
+    return p2;
+  else
+    return path.join(p1, p2);
+};
+
 var rootPath = findRootPath(),
-    inRoot = function(p) { return path.join(rootPath, p); },
+    inRoot = function(p) { return pathJoin(rootPath, p); },
     packageJson = JSON.parse(fs.readFileSync(inRoot('package.json'))),
     storePath = argv.store || inRoot((packageJson.shrinkwrapper || {}).store || './packages'),
     inStore = function(p) { return path.join(storePath, p); };
