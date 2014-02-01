@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-// TODO: Show a warning if no '_resolved' is present.
+// TODO: Show a warning if no '_resolved' is present due to npm bug
+//       (https://github.com/npm/npm/issues/3581).
 
 var fs = require('fs'),
     path = require('path'),
@@ -35,8 +36,10 @@ var findRootPath = function() {
 };
 
 var rootPath = findRootPath(),
-    packageJson = JSON.parse(fs.readFileSync(path.join(rootPath, 'package.json'))),
-    storePath = argv.store || path.join(rootPath, (packageJson.shrinkwrapper || {}).store || './packages');
+    inRoot = function(p) { return path.join(rootPath, p); },
+    packageJson = JSON.parse(fs.readFileSync(inRoot('package.json'))),
+    storePath = argv.store || inRoot((packageJson.shrinkwrapper || {}).store || './packages'),
+    inStore = function(p) { return path.join(storePath, p); };
 
 var urlBasename = function(url) {
   return path.basename(require('url').parse(url).path);
@@ -46,7 +49,7 @@ var download = function(url, next) {
   next = next || function() {};
   var filename = urlBasename(url);
   if (filename == '') return;
-  filename = path.join(storePath, filename);
+  filename = inStore(filename);
   fs.exists(filename, function(exists) {
     if (exists) {
       next(null);
@@ -108,7 +111,7 @@ var shrinkwrap = function() {
       }
 
       var tasks = {};
-      traverse(JSON.parse(fs.readFileSync(path.join(rootPath, 'npm-shrinkwrap.json')))).
+      traverse(JSON.parse(fs.readFileSync(inRoot('npm-shrinkwrap.json')))).
         forEach(function() {
           if (this.node['resolved']) {
             var url = this.node['resolved'];
@@ -116,6 +119,7 @@ var shrinkwrap = function() {
           }
         });
 
+      console.log("Downloading to package store", chalk.magenta(storePath));
       mkdirp.sync(storePath);
 
       async.parallelLimit(tasks, 10, function(err) {
@@ -133,7 +137,7 @@ var shrinkwrap = function() {
 var install = function() {
 
   // Complain if we don't have a shrinkwrap file
-  if (!fs.existsSync(path.join(rootPath, 'npm-shrinkwrap.json'))) {
+  if (!fs.existsSync(inRoot('npm-shrinkwrap.json'))) {
     console.log("Missing 'npm-shrinkwrap.json'.  Run " + chalk.yellow(argv.$0 + ' shrinkwrap'));
     process.exit(1);
   }
@@ -144,6 +148,11 @@ var install = function() {
   portfinder.basePort = parseInt(basePort, 10);
   portfinder.getPort(function (err, port) {
     if (err) throw err;
+
+    console.log(
+      "Installing from package store", chalk.magenta(storePath),
+      "as", chalk.green(host+':'+port)
+    );
 
     var server = http.createServer(ecstatic(storePath));
     server.listen(port, host, function() {
@@ -157,8 +166,8 @@ var install = function() {
           url;
       };
 
-      var files = glob.sync('node_modules/*/package.json', { cwd: rootPath });
-      files.unshift('npm-shrinkwrap.json');
+      var files = glob.sync(inRoot('node_modules/*/package.json'));
+      files.unshift(inRoot('npm-shrinkwrap.json'));
 
       async.each(files, function(file, next) {
           mapFile(file,
